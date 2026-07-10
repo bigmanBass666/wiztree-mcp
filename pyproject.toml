@@ -1,0 +1,23 @@
+[project]
+name = "wiztree-mcp"
+version = "0.1.0"
+description = "WizTree-based disk analysis MCP server — scan, query, compare and visualize disk usage"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "mcp >= 1.2.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.urls]
+homepage = "https://github.com/onmokoworks/wiztree-mcp"
+repository = "https://github.com/onmokoworks/wiztree-mcp"
+
+[project.scripts]
+wiztree-mcp = "wiztree_mcp.__main__:main"
