@@ -80,12 +80,20 @@ async def scan_disk(
     # 3. Run WizTree
     logger.info("Starting WizTree scan: %s → %s", target_path, csv_path)
 
+    # Only use admin mode for full drive scans (e.g., "C:", "D:")
+    # Directory scans don't need MFT access and admin=1 causes UAC hang
+    is_drive_root = (
+        len(target_path) <= 3
+        and target_path.endswith(":")
+    ) or target_path in ("C:", "D:", "E:", "F:", "G:", "H:", "I:", "J:", "K:", "L:", "M:", "N:", "O:", "P:", "Q:", "R:", "S:", "T:", "U:", "V:", "W:", "X:", "Y:", "Z:")
+    admin_mode = is_drive_root
+
     wiztree_ver = get_version()
     try:
         result = run_scan(
             target_path=target_path,
             csv_path=csv_path,
-            admin=True,
+            admin=admin_mode,
             sort_by=1,
             export_folders=export_folders,
             export_files=export_files,

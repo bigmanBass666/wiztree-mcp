@@ -11,6 +11,10 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Windows API constants for hiding the GUI window
+_STARTF_USESHOWWINDOW = 0x0001
+_SW_HIDE = 0
+
 # Common install locations on Windows
 _DEFAULT_SEARCH_PATHS = [
     r"D:\apps\WizTree\WizTree64.exe",
@@ -135,26 +139,34 @@ def run_scan(
     cmd = [
         exe_path,
         target_path,
-        f'/export="{csv_path}"',
-        f"/admin={1 if admin else 0}",
-        f"/sortby={sort_by}",
-        f"/exportfolders={1 if export_folders else 0}",
-        f"/exportfiles={1 if export_files else 0}",
-        f"/exportdrivecapacity={1 if export_drive_capacity else 0}",
+        f'/export={csv_path}',
+        f'/admin={1 if admin else 0}',
+        f'/sortby={sort_by}',
+        f'/exportfolders={1 if export_folders else 0}',
+        f'/exportfiles={1 if export_files else 0}',
+        f'/exportdrivecapacity={1 if export_drive_capacity else 0}',
     ]
 
     if max_depth is not None:
         cmd.append(f"/exportmaxdepth={max_depth}")
 
     if treemap_path:
-        cmd.append(f'/treemapimagefile="{treemap_path}"')
+        cmd.append(f'/treemapimagefile={treemap_path}')
         cmd.append(f"/treemapimagewidth={treemap_width}")
         cmd.append(f"/treemapimageheight={treemap_height}")
 
     logger.info("Running WizTree: %s", " ".join(cmd))
 
+    # Hide the WizTree GUI window (equivalent to Node.js spawn windowsHide: true).
+    # WizTree64.exe is a GUI application; we use STARTUPINFO to tell Windows
+    # to create the initial window hidden so it doesn't pop up and steal focus.
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags = _STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = _SW_HIDE
+
     proc = subprocess.run(
         cmd,
+        startupinfo=startupinfo,
         capture_output=True,
         text=True,
         timeout=timeout,
