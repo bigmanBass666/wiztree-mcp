@@ -2,11 +2,46 @@
 name = "wiztree-mcp"
 version = "0.1.0"
 description = "WizTree-based disk analysis MCP server — scan, query, compare and visualize disk usage"
+readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+authors = [
+    { name = "bigmanBass666", email = "bigmanbass666@users.noreply.github.com" },
+]
+keywords = ["wiztree", "disk-analysis", "mcp", "claude", "disk-usage"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Filesystems",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+]
 dependencies = [
     "mcp >= 1.2.0",
 ]
+
+[project.urls]
+homepage = "https://github.com/bigmanBass666/wiztree-mcp"
+repository = "https://github.com/bigmanBass666/wiztree-mcp"
+changelog = "https://github.com/bigmanBass666/wiztree-mcp/releases"
+
+[project.optional-dependencies]
+dev = [
+    "pytest >= 8.0",
+    "pyright >= 1.1",
+]
+
+[project.scripts]
+wiztree-mcp = "wiztree_mcp.__main__:main"
 
 [build-system]
 requires = ["setuptools>=68.0"]
@@ -15,9 +50,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[project.urls]
-homepage = "https://github.com/onmokoworks/wiztree-mcp"
-repository = "https://github.com/onmokoworks/wiztree-mcp"
-
-[project.scripts]
-wiztree-mcp = "wiztree_mcp.__main__:main"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
