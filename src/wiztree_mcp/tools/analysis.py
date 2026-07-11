@@ -114,3 +114,63 @@ async def large_old_files(
         lines.append(f"   {size_str:>12}  {modified:>16}  {r['path']}")
 
     return "\n".join(lines)
+
+@server.mcp.tool()
+async def find_duplicates(
+    scan_id: int,
+    ctx: MCPContext,
+    min_size_mb: int = 0,
+    limit: int = 50,
+) -> str:
+    """Find duplicate files within a scan by matching filename + file size.
+
+    Identifies groups of files that share the same name and size — strong
+    indicators of duplicates. Results are sorted by wasted space descending
+    so the most impactful duplicates appear first.
+
+    Args:
+        scan_id: The scan ID.
+        min_size_mb: Minimum file size in MB to consider (0 = no minimum).
+        limit: Maximum duplicate clusters to return (default 50, max 200).
+        ctx: MCP context (injected automatically).
+
+    Returns:
+        Formatted table of duplicate file clusters.
+    """
+    if limit > 200:
+        limit = 200
+    db = server.get_db()
+    min_size_bytes = min_size_mb * 1024 * 1024
+    clusters = db.find_duplicates(scan_id, min_size=min_size_bytes, limit=limit)
+
+    if not clusters:
+        msg = "No duplicate files found"
+        if min_size_mb > 0:
+            msg += f" larger than {min_size_mb} MB"
+        msg += f" in scan #{scan_id}."
+        return msg
+
+    total_wasted = sum(c["wasted"] for c in clusters)
+
+    lines = [
+        f"🔍 Duplicate Files (scan #{scan_id})",
+        f"   Clusters: {len(clusters)}, Total wasted: {_format_size(total_wasted)}",
+        f"   {'Wasted':>10}  {'Size':>10}  {'Copies':>6}  {'Filename'}",
+        f"   {'-'*10}  {'-'*10}  {'-'*6}  {'-'*50}",
+    ]
+
+    for c in clusters:
+        wasted_str = _format_size(c["wasted"])
+        size_str = _format_size(c["size"])
+        lines.append(
+            f"   {wasted_str:>10}  {size_str:>10}  {c['count']:>6}  {c['filename']}"
+        )
+        # Show up to 3 paths as examples
+        for p in c["paths"][:3]:
+            lines.append(f"   {'':>28}  {p}")
+        if len(c["paths"]) > 3:
+            lines.append(f"   {'':>28}  ... and {len(c['paths'])-3} more")
+
+    lines.append(f"\n💡 Tip: use search_paths(scan_id={scan_id}, query='filename.ext') to find all copies")
+
+    return "\n".join(lines)

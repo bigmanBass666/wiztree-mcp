@@ -333,6 +333,65 @@ class Database:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def find_duplicates(
+        self,
+        scan_id: int,
+        min_size: int = 0,
+        limit: int = 50,
+    ) -> list[dict]:
+        """Find duplicate files (same filename + same size) within a scan.
+
+        Returns a list of cluster dicts, each with:
+          - filename: the file name
+          - size: file size in bytes
+          - count: number of copies
+          - wasted: (count-1) * size bytes that could be reclaimed
+          - paths: list of full paths to each copy
+        """
+        # Step 1: find all files whose size is shared by at least one other file
+        rows = self._conn.execute(
+            """SELECT id, path, size, modified
+               FROM entries
+               WHERE scan_id=?
+                 AND is_folder=0
+                 AND size>=?
+                 AND size IN (
+                     SELECT size FROM entries
+                     WHERE scan_id=? AND is_folder=0 AND size>=?
+                     GROUP BY size HAVING COUNT(*)>1
+                 )
+               ORDER BY size DESC, path
+               LIMIT 10000""",
+            (scan_id, min_size, scan_id, min_size),
+        ).fetchall()
+
+        # Step 2: group by (filename, size) in Python
+        groups: dict[tuple[str, int], list[dict]] = {}
+        for r in rows:
+            path = r["path"]
+            # Extract filename (last component of path)
+            filename = path.rsplit("\\", 1)[-1] if "\\" in path else path.rsplit("/", 1)[-1]
+            key = (filename, r["size"])
+            groups.setdefault(key, []).append({
+                "path": path,
+                "size": r["size"],
+                "modified": r["modified"],
+            })
+
+        # Step 3: keep only true duplicates (>1 copy), sort by wasted space
+        clusters = [
+            {
+                "filename": fn,
+                "size": members[0]["size"],                "count": len(members),
+                "wasted": members[0]["size"] * (len(members) - 1),                "paths": [m["path"] for m in members],
+            }
+            for (fn, sz), members in groups.items()
+            if len(members) > 1
+        ]
+        clusters.sort(key=lambda c: c["wasted"], reverse=True)
+
+        return clusters[:limit]
+
     def compare_scans(
         self,
         scan_id_before: int,
